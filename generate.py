@@ -1,27 +1,26 @@
-###############################################################################
-# Language Modeling on Penn Tree Bank
-#
-# This file generates new sentences sampled from the language model
-#
-###############################################################################
-
 import argparse
-
+import random
+from creds import *
 import torch
+import tweepy
 from torch.autograd import Variable
-
+from time import sleep
 import data
 
-parser = argparse.ArgumentParser(description='PyTorch PTB Language Model')
+auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
+auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+api = tweepy.API(auth)
+
+parser = argparse.ArgumentParser(description='Kendrick bot generator')
 
 # Model parameters.
-parser.add_argument('--data', type=str, default='./data/penn',
+parser.add_argument('--data', type=str, default='./data/kendrick',
                     help='location of the data corpus')
 parser.add_argument('--checkpoint', type=str, default='./model.pt',
                     help='model checkpoint to use')
 parser.add_argument('--outf', type=str, default='generated.txt',
                     help='output file for generated text')
-parser.add_argument('--words', type=int, default='1000',
+parser.add_argument('--words', type=int, default='200',
                     help='number of words to generate')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
@@ -59,16 +58,30 @@ hidden = model.init_hidden(1)
 input = Variable(torch.rand(1, 1).mul(ntokens).long(), volatile=True)
 if args.cuda:
     input.data = input.data.cuda()
-
-with open(args.outf, 'w') as outf:
+tweet = ''
+line = []
+while True:
     for i in range(args.words):
         output, hidden = model(input, hidden)
         word_weights = output.squeeze().data.div(args.temperature).exp().cpu()
         word_idx = torch.multinomial(word_weights, 1)[0]
         input.data.fill_(word_idx)
         word = corpus.dictionary.idx2word[word_idx]
+        if word == "<eos>":
+            line.append('\n')
+            if len(tweet) + len(' '.join(line)) + 9 < 140:
+                tweet += ' '.join(line)
+            else:
 
-        outf.write(word + ('\n' if i % 20 == 19 else ' '))
+                print(tweet)
+                try:
+                    api.update_status(tweet + ' #kendrick')
 
-        if i % args.log_interval == 0:
-            print('| Generated {}/{} words'.format(i, args.words))
+                except tweepy.error.TweepError:
+                    continue
+                tweet = ''
+                sleep(900)
+            line = []
+
+        else:
+            line.append(word)
