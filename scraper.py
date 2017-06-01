@@ -1,6 +1,4 @@
 import random
-import shutil
-from io import StringIO
 from time import sleep
 
 import requests
@@ -10,7 +8,6 @@ AZ_BASE_URL = 'http://www.metrolyrics.com/'
 kendrick_urls = ['http://www.metrolyrics.com/kendrick-lamar-alpage-1.html',
                  "http://www.metrolyrics.com/kendrick-lamar-alpage-2.html",
                  "http://www.metrolyrics.com/kendrick-lamar-alpage-3.html"]
-to_file = StringIO()
 
 
 def get_file():
@@ -21,11 +18,9 @@ def get_file():
         for link in BeautifulSoup(response.text, "html.parser", parse_only=SoupStrainer('a')):
             if link.has_attr('href'):
                 if "lyrics-kendrick-lamar" in (link['href']):
-                    to_file.write(get_lyrics(link['href']))
-
-    with open('kendrick.txt', 'w') as fd:
-        to_file.seek(0)
-        shutil.copyfileobj(to_file, fd)
+                    with open('kendrick.txt', 'a') as fd:
+                        lyrics = get_lyrics(link['href'])
+                        fd.write(lyrics)
 
 
 def get_lyrics(url):
