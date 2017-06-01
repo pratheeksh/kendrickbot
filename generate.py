@@ -1,11 +1,12 @@
 import argparse
-import random
-from creds import *
+from time import sleep
+
 import torch
 import tweepy
 from torch.autograd import Variable
-from time import sleep
+
 import data
+from creds import *
 
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
@@ -60,28 +61,27 @@ if args.cuda:
     input.data = input.data.cuda()
 tweet = ''
 line = []
-while True:
-    for i in range(args.words):
-        output, hidden = model(input, hidden)
-        word_weights = output.squeeze().data.div(args.temperature).exp().cpu()
-        word_idx = torch.multinomial(word_weights, 1)[0]
-        input.data.fill_(word_idx)
-        word = corpus.dictionary.idx2word[word_idx]
-        if word == "<eos>":
-            line.append('\n')
-            if len(tweet) + len(' '.join(line)) + 9 < 140:
-                tweet += ' '.join(line)
-            else:
-
-                print(tweet)
-                try:
-                    api.update_status(tweet + ' #kendrick')
-
-                except tweepy.error.TweepError:
-                    continue
-                tweet = ''
-                sleep(900)
-            line = []
-
+for i in range(args.words):
+    output, hidden = model(input, hidden)
+    word_weights = output.squeeze().data.div(args.temperature).exp().cpu()
+    word_idx = torch.multinomial(word_weights, 1)[0]
+    input.data.fill_(word_idx)
+    word = corpus.dictionary.idx2word[word_idx]
+    if word == "<eos>":
+        line.append('\n')
+        if len(tweet) + len(' '.join(line)) + 9 < 140:
+            tweet += ' '.join(line)
         else:
-            line.append(word)
+
+            print(tweet)
+            try:
+                api.update_status(tweet + ' #kendrick')
+
+            except tweepy.error.TweepError:
+                continue
+            tweet = ''
+            sleep(900)
+        line = []
+
+    else:
+        line.append(word)
